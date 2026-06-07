@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brasil-green: #009739;
+  --color-brasil-yellow: #FFDF00;
+  --color-brasil-blue: #012169;
+  --color-app-fundo: #F4F7F6;
+  --color-app-texto: #1A1D21;
+}
+
+:root {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--color-app-fundo);
+  color: var(--color-app-texto);
+}
+
+/* 
+  CAUSA RAIZ DAS FAIXAS LATERAIS:
+  1. No arquivo anterior, o :root tinha background-color: #242424 (preto).
+  2. O componente Layout possuía max-w-md mx-auto, o que limitava a largura a 448px.
+  3. Em telas maiores, o fundo do :root aparecia nas sobras.
+  
+  SOLUÇÃO:
+  - Definir largura 100% para html e body.
+  - Remover max-width do Layout.
+  - Mudar cor de fundo do root para a cor oficial do app.
+*/
+
+html, body, #root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  display: block;
+  background-color: var(--color-app-fundo);
+}
+
+/* Padronização de Inputs */
+input {
+  width: 100%;
+  height: 52px;
+  background-color: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 12px !important;
+  padding: 0 16px !important;
+  font-size: 16px !important;
+  color: #1A1D21 !important;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+input:focus {
+  border-color: var(--color-brasil-green) !important;
+  box-shadow: 0 0 0 2px rgba(0, 151, 57, 0.1) !important;
+}
+
+input::placeholder {
+  color: #94A3B8;
+}
+
+/* Utilitários Globais */
+.card-shadow {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
