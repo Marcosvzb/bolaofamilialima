@@ -4,12 +4,13 @@ import { db } from '../services/firebase';
 import type { Jogo, Aposta } from '../types';
 import { 
   Users, CheckCircle2, Clock, 
-  ChevronRight, ArrowLeft
+  ChevronRight, ArrowLeft, QrCode, Copy, X, Check
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatarMoeda } from '../utils/pix';
 import BandeiraPais from '../components/BandeiraPais';
+import { QRCodeSVG } from 'qrcode.react';
 
 const MinhasApostas: React.FC = () => {
   const [jogos, setJogos] = useState<Jogo[]>([]);
@@ -17,6 +18,8 @@ const MinhasApostas: React.FC = () => {
   const [jogoSelecionado, setJogoSelecionado] = useState<Jogo | null>(null);
   const [apostasDoJogo, setApostasDoJogo] = useState<Aposta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [apostaVerPix, setApostaVerPix] = useState<Aposta | null>(null);
+  const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
     const qJogos = query(collection(db, 'jogos'), orderBy('dataHora', 'desc'));
@@ -68,6 +71,12 @@ const MinhasApostas: React.FC = () => {
 
     return () => unsub();
   }, [jogoSelecionado]);
+
+  const handleCopiarPix = (texto: string) => {
+    navigator.clipboard.writeText(texto);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  };
 
   if (loading) return <div className="p-10 text-center text-slate-400 font-black text-[10px] uppercase tracking-widest">Carregando...</div>;
 
@@ -141,10 +150,22 @@ const MinhasApostas: React.FC = () => {
                        <h4 className="font-black text-slate-800 uppercase tracking-tighter text-lg leading-none mb-1">{aposta.nomeParticipante}</h4>
                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">ID: {aposta.codigoAposta}</p>
                     </div>
-                    <div className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase border flex items-center gap-1 ${
-                      aposta.statusPagamento === 'confirmado' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
-                    }`}>
-                      {aposta.statusPagamento === 'confirmado' ? <><CheckCircle2 size={10} /> Confirmado</> : <><Clock size={10} /> Aguardando PIX</>}
+                    <div className="flex flex-col items-end gap-2">
+                      <div className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase border flex items-center gap-1 ${
+                        aposta.statusPagamento === 'confirmado' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                      }`}>
+                        {aposta.statusPagamento === 'confirmado' ? <><CheckCircle2 size={10} /> Confirmado</> : <><Clock size={10} /> Aguardando PIX</>}
+                      </div>
+                      
+                      {aposta.statusPagamento === 'pendente' && (
+                        <button 
+                          onClick={() => setApostaVerPix(aposta)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-brasil-blue text-white rounded-xl text-[9px] font-black uppercase hover:bg-blue-700 transition-colors shadow-sm active:scale-95"
+                        >
+                          <QrCode size={12} />
+                          Ver PIX
+                        </button>
+                      )}
                     </div>
                  </div>
 
@@ -159,6 +180,56 @@ const MinhasApostas: React.FC = () => {
             ))
           )}
         </div>
+
+        {/* Modal PIX */}
+        {apostaVerPix && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-black text-slate-800 uppercase italic">Pagamento PIX</h3>
+                <button onClick={() => setApostaVerPix(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                  <X size={20} className="text-slate-400" />
+                </button>
+              </div>
+
+              <div className="flex flex-col items-center text-center">
+                <div className="bg-slate-50 p-6 rounded-[32px] border border-slate-100 mb-6">
+                  <QRCodeSVG value={apostaVerPix.codigoPagamento} size={200} />
+                </div>
+
+                <div className="w-full bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2 text-left">Código PIX (Copia e Cola)</p>
+                  <p className="text-[10px] text-slate-600 font-mono break-all line-clamp-3 text-left bg-white p-2 rounded-lg border border-slate-100">
+                    {apostaVerPix.codigoPagamento}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => handleCopiarPix(apostaVerPix.codigoPagamento)}
+                  className={`w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-xs font-black uppercase transition-all active:scale-[0.98] ${
+                    copiado ? 'bg-emerald-500 text-white' : 'bg-brasil-green text-white shadow-lg shadow-emerald-200'
+                  }`}
+                >
+                  {copiado ? (
+                    <>
+                      <Check size={18} strokeWidth={3} />
+                      Copiado!
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={18} strokeWidth={3} />
+                      Copiar Código PIX
+                    </>
+                  )}
+                </button>
+                
+                <p className="mt-6 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                  Valor Total: <span className="text-slate-700">{formatarMoeda(apostaVerPix.valorTotal)}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
