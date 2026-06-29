@@ -8,14 +8,16 @@ import type { Jogo, Aposta } from '../types';
 import { 
   Plus, Trash2, Clock, 
   DollarSign, Users, Settings,
-  LogIn, X, Trophy, ArrowRight
+  LogIn, X, Trophy, ArrowRight,
+  Share2
 } from 'lucide-react';
 import { formatarMoeda } from '../utils/pix';
-import { calcularResultadoBolao } from '../utils/regrasNegocio';
+import { calcularResultadoBolao, estaAceitandoPalpites } from '../utils/regrasNegocio';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import BandeiraPais from '../components/BandeiraPais';
+import ExportarApostasModal from '../components/ExportarApostasModal';
 
 const Admin: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +27,7 @@ const Admin: React.FC = () => {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [jogoParaExportar, setJogoParaExportar] = useState<Jogo | null>(null);
 
   const [novoJogo, setNovoJogo] = useState({
     timeCasa: 'Brasil',
@@ -192,12 +195,23 @@ const Admin: React.FC = () => {
                       </div>
                    </div>
                 </div>
-                <button 
-                  onClick={async () => { if(window.confirm("Excluir convocação?")) await deleteDoc(doc(db, 'jogos', jogo.id)); }} 
-                  className="text-slate-200 hover:text-rose-500 p-2 transition-colors active:scale-90"
-                >
-                  <Trash2 size={20} />
-                </button>
+                <div className="flex items-center gap-1">
+                  {!estaAceitandoPalpites(jogo) && (
+                    <button 
+                      onClick={() => setJogoParaExportar(jogo)}
+                      className="text-brasil-blue hover:bg-brasil-blue/5 p-2 rounded-xl transition-colors active:scale-90"
+                      title="Exportar Apostas"
+                    >
+                      <Share2 size={20} />
+                    </button>
+                  )}
+                  <button 
+                    onClick={async () => { if(window.confirm("Excluir convocação?")) await deleteDoc(doc(db, 'jogos', jogo.id)); }} 
+                    className="text-slate-200 hover:text-rose-500 p-2 transition-colors active:scale-90"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
               </div>
 
               {jogo.status === 'aberto' ? (
@@ -271,6 +285,15 @@ const Admin: React.FC = () => {
             <DollarSign size={240} />
          </div>
       </section>
+
+      {/* Modal Exportar Apostas */}
+      {jogoParaExportar && (
+        <ExportarApostasModal 
+          jogo={jogoParaExportar}
+          apostas={apostas}
+          onClose={() => setJogoParaExportar(null)}
+        />
+      )}
     </div>
   );
 };

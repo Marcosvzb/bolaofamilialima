@@ -98,3 +98,14 @@ export const obterCodigoISO = (nomePais: string): string => {
   
   return codigo || "";
 };
+
+/**
+ * Retorna o emoji da bandeira do país.
+ */
+export const obterEmojiBandeira = (nomePais: string): string => {
+  const code = obterCodigoISO(nomePais);
+  if (!code) return "";
+  return code
+    .toUpperCase()
+    .replace(/./g, (char) => String.fromCodePoint(char.charCodeAt(0) + 127397));
+};
