@@ -1,23 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Copy, Check } from 'lucide-react';
 import type { Jogo, Aposta } from '../types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { obterEmojiBandeira } from '../utils/mapaPaises';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../services/firebase';
 
 interface ExportarApostasModalProps {
   jogo: Jogo;
-  apostas: Aposta[];
   onClose: () => void;
 }
 
-const ExportarApostasModal: React.FC<ExportarApostasModalProps> = ({ jogo, apostas, onClose }) => {
+const ExportarApostasModal: React.FC<ExportarApostasModalProps> = ({ jogo, onClose }) => {
   const [copiado, setCopiado] = useState(false);
+  const [apostasConfirmadas, setApostasConfirmadas] = useState<Aposta[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filtrar apenas apostas confirmadas para este jogo
-  const apostasConfirmadas = apostas.filter(a => a.jogoId === jogo.id && a.statusPagamento === 'confirmado');
+  useEffect(() => {
+    const q = query(
+      collection(db, 'apostas'),
+      where('jogoId', '==', jogo.id),
+      where('statusPagamento', '==', 'confirmado')
+    );
+    const unsubscribe = onSnapshot(q, (snap) => {
+      setApostasConfirmadas(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Aposta)));
+      setLoading(false);
+    }, (error) => {
+      console.error("Erro ao buscar apostas do jogo:", error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [jogo.id]);
 
   const gerarTexto = () => {
+    if (loading) {
+      return "Carregando apostas...";
+    }
     const bandeiraCasa = obterEmojiBandeira(jogo.timeCasa);
     const bandeiraVisitante = obterEmojiBandeira(jogo.timeVisitante);
     const dataFormatada = format(jogo.dataHora.toDate(), "dd/MM/yyyy", { locale: ptBR });

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   collection, addDoc, query, orderBy, onSnapshot, doc, 
-  deleteDoc, Timestamp 
+  deleteDoc, Timestamp, where 
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import type { Jogo, Aposta } from '../types';
@@ -46,11 +46,35 @@ const Admin: React.FC = () => {
       setJogos(snap.docs.map(d => ({ id: d.id, ...d.data() } as Jogo)));
       setLoading(false);
     });
-    const unsubApostas = onSnapshot(collection(db, 'apostas'), (snap) => {
-      setApostas(snap.docs.map(d => ({ id: d.id, ...d.data() } as Aposta)));
-    });
-    return () => { unsubJogos(); unsubApostas(); };
+    return () => unsubJogos();
   }, [acessoLiberado]);
+
+  // Carregar apostas apenas para jogos ativos no painel admin
+  useEffect(() => {
+    if (!acessoLiberado || loading) return;
+
+    const jogosAtivos = jogos.filter(j => j.status !== 'encerrado');
+
+    if (jogosAtivos.length === 0) {
+      setApostas([]);
+      return;
+    }
+
+    const gameIds = jogosAtivos.map(j => j.id).slice(0, 30);
+
+    const q = query(
+      collection(db, 'apostas'),
+      where('jogoId', 'in', gameIds)
+    );
+
+    const unsubApostas = onSnapshot(q, (snap) => {
+      setApostas(snap.docs.map(d => ({ id: d.id, ...d.data() } as Aposta)));
+    }, (error) => {
+      console.error("Erro ao buscar apostas dos jogos ativos:", error);
+    });
+
+    return () => unsubApostas();
+  }, [acessoLiberado, jogos, loading]);
 
   const handleCriarJogo = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -290,7 +314,6 @@ const Admin: React.FC = () => {
       {jogoParaExportar && (
         <ExportarApostasModal 
           jogo={jogoParaExportar}
-          apostas={apostas}
           onClose={() => setJogoParaExportar(null)}
         />
       )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  collection, query, orderBy, onSnapshot, doc, 
-  increment, writeBatch, getDoc 
+  collection, query, onSnapshot, doc, 
+  increment, writeBatch, getDoc, where 
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import type { Aposta, Jogo } from '../types';
@@ -17,19 +17,74 @@ const PagamentosAdmin: React.FC = () => {
   const [jogosCache, setJogosCache] = useState<Record<string, Jogo>>({});
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'pendente' | 'confirmado' | 'cancelado'>('todos');
   const [loading, setLoading] = useState(true);
+  const [jogosAtivos, setJogosAtivos] = useState<Jogo[]>([]);
+  const [loadingJogos, setLoadingJogos] = useState(true);
 
+  // 1. Buscar apenas os jogos que ainda estão ativos (status !== 'encerrado')
   useEffect(() => {
-    const q = query(collection(db, 'apostas'), orderBy('dataCriacao', 'desc'));
+    const qJogos = query(
+      collection(db, 'jogos'),
+      where('status', '!=', 'encerrado')
+    );
+    const unsubscribe = onSnapshot(qJogos, (snapshot) => {
+      const activeGames = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      })) as Jogo[];
+      
+      setJogosAtivos(activeGames);
+      
+      // Atualizar cache com os jogos ativos
+      setJogosCache(prev => {
+        const next = { ...prev };
+        activeGames.forEach(jogo => {
+          next[jogo.id] = jogo;
+        });
+        return next;
+      });
+      
+      setLoadingJogos(false);
+    }, (error) => {
+      console.error("Erro ao buscar jogos ativos:", error);
+      setLoadingJogos(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // 2. Buscar apenas apostas dos jogos ativos
+  useEffect(() => {
+    if (loadingJogos) return;
+
+    if (jogosAtivos.length === 0) {
+      setApostas([]);
+      setLoading(false);
+      return;
+    }
+
+    const gameIds = jogosAtivos.map(j => j.id).slice(0, 30);
+
+    const q = query(
+      collection(db, 'apostas'),
+      where('jogoId', 'in', gameIds)
+    );
+
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      // Programação defensiva: garantir que docs exista
       const apostasData = snapshot.docs?.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Aposta[] ?? [];
-      
+
+      // Ordenar por data de criação de forma decrescente no lado do cliente
+      apostasData.sort((a, b) => {
+        const tA = a.dataCriacao?.toDate().getTime() ?? 0;
+        const tB = b.dataCriacao?.toDate().getTime() ?? 0;
+        return tB - tA;
+      });
+
       setApostas(apostasData);
-      
-      // Busca jogos relacionados para o cache de forma assíncrona e segura
+
+      // Garantir que temos os jogos no cache
       for (const aposta of apostasData) {
         if (aposta?.jogoId && !jogosCache[aposta.jogoId]) {
           try {
@@ -43,10 +98,13 @@ const PagamentosAdmin: React.FC = () => {
         }
       }
       setLoading(false);
+    }, (error) => {
+      console.error("Erro ao carregar apostas:", error);
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [jogosAtivos, loadingJogos]);
 
   const confirmarPagamento = async (aposta: Aposta) => {
     if (!aposta || aposta.statusPagamento === 'confirmado') return;
