@@ -9,7 +9,7 @@ import {
   Plus, Trash2, Clock, 
   DollarSign, Users, Settings,
   LogIn, X, Trophy, ArrowRight,
-  Share2
+  Share2, BarChart2
 } from 'lucide-react';
 import { formatarMoeda } from '../utils/pix';
 import { calcularResultadoBolao, estaAceitandoPalpites } from '../utils/regrasNegocio';
@@ -21,7 +21,9 @@ import ExportarApostasModal from '../components/ExportarApostasModal';
 
 const Admin: React.FC = () => {
   const navigate = useNavigate();
-  const [acessoLiberado, setAcessoLiberado] = useState(false);
+  const [acessoLiberado, setAcessoLiberado] = useState(() => {
+    return sessionStorage.getItem('admin_acesso_liberado') === 'true';
+  });
   const [senhaDigitada, setSenhaDigitada] = useState('');
   const [jogos, setJogos] = useState<Jogo[]>([]);
   const [apostas, setApostas] = useState<Aposta[]>([]);
@@ -110,7 +112,10 @@ const Admin: React.FC = () => {
           
           <form onSubmit={(e) => {
             e.preventDefault();
-            if (senhaDigitada === SENHA_MESTRA) setAcessoLiberado(true);
+            if (senhaDigitada === SENHA_MESTRA) {
+              sessionStorage.setItem('admin_acesso_liberado', 'true');
+              setAcessoLiberado(true);
+            }
             else alert("Senha incorreta!");
           }} className="space-y-4">
             <input 
@@ -138,6 +143,20 @@ const Admin: React.FC = () => {
 
   return (
     <div className="space-y-10 pb-20 animate-in fade-in duration-500">
+      {/* Cabeçalho */}
+      <header className="flex justify-between items-center px-2">
+        <div>
+          <h2 className="text-2xl font-black text-slate-800 uppercase italic tracking-tight">Gestão</h2>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Controle Geral</p>
+        </div>
+        <button
+          onClick={() => navigate('/admin/relatorios')}
+          className="bg-brasil-blue text-white h-12 px-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brasil-blue/20 flex items-center gap-2 active:scale-95 transition-transform border border-brasil-blue hover:bg-brasil-blue/90"
+        >
+          <BarChart2 size={16} /> Relatórios
+        </button>
+      </header>
+
       {/* Dashboard Financeiro */}
       <section className="grid grid-cols-2 gap-5">
         <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-50">

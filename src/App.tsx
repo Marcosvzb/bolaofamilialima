@@ -5,6 +5,7 @@ import MinhasApostas from './pages/MinhasApostas';
 import Admin from './pages/Admin';
 import PagamentosAdmin from './pages/PagamentosAdmin';
 import Historico from './pages/Historico';
+import Relatorios from './pages/Relatorios';
 import Layout from './layouts/Layout';
 import SplashScreen from './components/SplashScreen';
 
@@ -20,6 +21,7 @@ function App() {
             <Route path="/minhas-apostas" element={<MinhasApostas />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/pagamentos" element={<PagamentosAdmin />} />
+            <Route path="/admin/relatorios" element={<Relatorios />} />
             <Route path="/historico" element={<Historico />} />
           </Routes>
         </Layout>
